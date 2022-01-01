@@ -80,7 +80,7 @@ function on_off_attr_handler(driver, device, value, zb_rx)
         end
         --old_button_handler(device, component_id, value)
         --
-        -- device:remove_monitored_attribute(0006, 000)
+        device:remove_monitored_attribute(OnOff, 000) -- AmacK
         --        
     end
 end

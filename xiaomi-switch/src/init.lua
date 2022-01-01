@@ -67,6 +67,10 @@ local device_init = function(self, device)
 
   device:set_field("first_switch_ep", configs.first_switch_ep, {persist = true})
   device:set_field("first_button_ep", configs.first_button_ep, {persist = true})
+  device:remove_monitored_attribute(0x0006, 0x0000) -- AmacK
+  log.debug("0x0006 monitoring removed")
+  device:remove_monitored_attribute(0x0012, 0x0055) -- AmacK
+  log.debug("0x0012 monitoring removed")
 
   if device:supports_capability(capabilities.button, "main") then
     device:emit_event(capabilities.button.numberOfButtons({ value=2 }))
