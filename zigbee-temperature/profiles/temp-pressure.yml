@@ -9,7 +9,7 @@ components:
   - id: legendabsolute60149.atmosPressure
     version: 1
   - id: relativeHumidityMeasurement
-    version: 1
+    version: 1 
   - id: configuration
     version: 1
   - id: battery
@@ -18,6 +18,8 @@ components:
     version: 1
   - id: temperatureAlarm
     version: 1
+  - id: signalStrength
+    version: 1 
   categories:
   - name: Thermostat
 preferences:

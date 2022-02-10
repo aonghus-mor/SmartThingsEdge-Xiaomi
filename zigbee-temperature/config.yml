@@ -1,4 +1,4 @@
-name: 'Xiaomi Temperature'
-packageKey: 'xiaomi-temp'
+name: 'Xiaomi Temperature (AonghusMor)'
+packageKey: 'xiaomi-temp2'
 permissions:
   zigbee: {}

@@ -63,6 +63,24 @@ local function emit_temperature_event(device, temperature_record)
     alarm = capabilities.temperatureAlarm.temperatureAlarm.freeze()
   end
   device:emit_event(alarm)
+  
+  if temperature < -99 or temperature > 99 then
+    log.info("Temperature value out of range: " .. temperature)
+    return
+  end
+  device:emit_event(capabilities.temperatureMeasurement.temperature({ value = temperature, unit = "C" }))
+end
+
+local function emit_signal_event(device, rssi_value, lqi_value)
+	if device:supports_capability(capabilities.signalStrength, "main") then 
+		log.debug(string.format("Emitting RSSI:%4d   LQI:%4d", rssi_value, lqi_value))
+		device:emit_event(capabilities.signalStrength.rssi(rssi_value))
+		device:emit_event(capabilities.signalStrength.lqi(lqi_value))
+	end
+end
+
+local function test_log(device, mystring)
+   log.debug("Debugging:", mystring, mystring.value)
 end
 
 local xiaomi_utils = {
@@ -70,6 +88,8 @@ local xiaomi_utils = {
   xiami_events = {
     [0x01] = emit_battery_event,
     [0x03] = emit_temperature_event,
+	[0x05] = test_log,
+	[0x06] = test_log,
   }
 }
 
@@ -87,6 +107,8 @@ function xiaomi_utils.handler(driver, device, value, zb_rx)
       end
     end
   end
+  emit_signal_event(device, zb_rx.rssi.value, zb_rx.lqi.value)
+  log.debug(capabilities.waterSensor.water.value)
 end
 
 return xiaomi_utils

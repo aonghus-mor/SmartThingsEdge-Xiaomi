@@ -4,11 +4,14 @@ local ZigbeeDriver = require "st.zigbee"
 local constants = require "st.zigbee.constants"
 local defaults = require "st.zigbee.defaults"
 local log = require "log"
+local OnOffCluster = require "st.zigbee.generated.zcl_clusters.OnOff"
 
 local mgmt_bind_resp = require "st.zigbee.zdo.mgmt_bind_response"
 
 local data_types = require "st.zigbee.data_types"
 local cluster_base = require "st.zigbee.cluster_base"
+
+local myzcl = require "st.zigbee.zcl"
 
 local MultistateInput = 0x0012
 
@@ -22,11 +25,12 @@ local function component_to_endpoint(device, component_id)
   local first_switch_ep = utils.first_switch_ep(device)
   
   if component_id == "main" then
+	--log.info(string.format("component: %s   ep: %d %X", component_id, first_switch_ep, first_switch_ep))
     return first_switch_ep -- device.fingerprinted_endpoint_id -- 
   else
     local ep_num = component_id:match("button(%d)")
-    local res = ep_num and tonumber(ep_num - 1 + first_switch_ep) or device.fingerprinted_endpoint_id
-    --log.info("component:", component_id, "> ep:", res)
+    local res = ep_num and (tonumber(ep_num) - 1 + first_switch_ep) or device.fingerprinted_endpoint_id
+    --log.info(string.format("component: %s   ep: %d %X", component_id, res, res))
     return res
   end
 end
@@ -34,7 +38,12 @@ end
 local function endpoint_to_component(device, ep)
   local first_switch_ep = utils.first_switch_ep(device)
   local first_button_ep = utils.first_button_ep(device)
+  local button_group_ep = utils.first_button_group_ep(device)
   
+  if ep >= button_group_ep then
+    return string.format("group%d", ep - button_group_ep + 1)
+  end
+
   local comp_id
   if ep >= first_button_ep then
     comp_id = ep - first_button_ep
@@ -47,6 +56,7 @@ local function endpoint_to_component(device, ep)
     button_comp = string.format("button%d", comp_id + 1)
   end
 
+  --log.info("endpoint:", ep, "> component:", button_comp)
   return button_comp
 end
 
@@ -63,31 +73,47 @@ end
 local device_init = function(self, device)
   device:set_component_to_endpoint_fn(component_to_endpoint)
   device:set_endpoint_to_component_fn(endpoint_to_component)
+
+  ---
+  device:remove_monitored_attribute(0x0006, 0x0000)
+  device:remove_monitored_attribute(0x0012, 0x0055)
+  ---
   local configs = configsMap.get_device_parameters(device)
 
   device:set_field("first_switch_ep", configs.first_switch_ep, {persist = true})
   device:set_field("first_button_ep", configs.first_button_ep, {persist = true})
-  device:remove_monitored_attribute(0x0006, 0x0000) -- AmacK
-  log.debug("0x0006 monitoring removed")
-  device:remove_monitored_attribute(0x0012, 0x0055) -- AmacK
-  log.debug("0x0012 monitoring removed")
 
   if device:supports_capability(capabilities.button, "main") then
-    device:emit_event(capabilities.button.numberOfButtons({ value=2 }))
     event = capabilities.button.supportedButtonValues(configs.supported_button_values)
     device:emit_event(event)
-    for i = 2, 5 do
+
+    local numberOfButtons = 1
+    for i = 2, 10 do
       local comp_id = string.format("button%d", i)
       if not device:component_exists(comp_id) then
-        local last_button_ep = configs.first_button_ep +i -2
-        device:set_field("last_button_ep", last_button_ep, {persist = true})
-        log.info("last_button_ep:", last_button_ep)
+        numberOfButtons = i-1
         break
       end
       
       local comp = device.profile.components[comp_id]
       device:emit_component_event(comp, event)
     end
+
+    log.info("number of buttons:",numberOfButtons)
+    device:emit_event(capabilities.button.numberOfButtons({ value=numberOfButtons }))
+    
+    if numberOfButtons > 1 then
+      local comp_id = string.format("group%d", 1)
+      if device:component_exists(comp_id) then
+        local comp = device.profile.components[comp_id]
+        device:emit_component_event(comp, event)
+
+        local button_group_ep = configs.first_button_ep + numberOfButtons 
+        device:set_field("first_button_group_ep", button_group_ep, {persist = true})
+        log.info("first_button_group_ep:", button_group_ep)
+      end
+    end
+
   end
   
 end
@@ -104,33 +130,11 @@ function button_attr_handler(driver, device, value, zb_rx)
     return
   end
 
-  local click_type = utils.click_types[val+1]
+  local click_type = utils.click_types[val]
   --local component_id = ep - utils.first_button_ep(device) + 1
 
   if click_type ~= nil then
     utils.emit_button_event(device, zb_rx.address_header.src_endpoint.value, click_type({state_change = true}))
-  end
-end
-
-local function info_changed(driver, device, event, args)
-  -- xiaomi_switch_operation_mode_basic
-  for id, value in pairs(device.preferences) do
-      if args.old_st_store.preferences[id] ~= value then --and preferences[id] then
-          local data = tonumber(device.preferences[id])
-          
-          local attr
-          if id == "button1" then
-              attr = 0xFF22
-          elseif id == "button2" then
-              attr = 0xFF23
-          elseif id == "button3" then
-              attr = 0xFF24
-          end
-
-          if attr then
-              device:send(cluster_base.write_manufacturer_specific_attribute(device, zcl_clusters.basic_id, attr, 0x115F, data_types.Uint8, data) )
-          end
-      end
   end
 end
 
@@ -151,15 +155,16 @@ local switch_driver_template = {
   supported_capabilities = {
     capabilities.switch,
     capabilities.powerMeter,
+	capabilities.temperatureMeasurement,
     capabilities.temperatureAlarm,
+    capabilities.signalStrength,
     capabilities.refresh,
   },
   capability_handlers = {
     [capabilities.refresh.ID] = {
       [capabilities.refresh.commands.refresh.NAME] = do_refresh,
-    }
+    },
   },
-  use_defaults = false,
   cluster_configurations = {
     [capabilities.button.ID] = { -- have no idea if it works
       {
@@ -193,8 +198,6 @@ local switch_driver_template = {
   lifecycle_handlers = {
     init = device_init,
     added = device_init,
-    infoChanged = info_changed,
-    doConfigure = do_configure,
   }
 }
 

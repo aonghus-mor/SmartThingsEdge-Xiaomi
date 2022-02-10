@@ -10,7 +10,11 @@ components:
       version: 1
     - id: energyMeter
       version: 1
+    - id: temperatureMeasurement
+      version: 1
     - id: temperatureAlarm
+      version: 1
+    - id: signalStrength
       version: 1
     - id: refresh
       version: 1

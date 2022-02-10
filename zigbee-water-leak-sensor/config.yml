@@ -1,4 +1,4 @@
-name: 'Zigbee Water Leak Sensor'
-packageKey: 'zigbee-water-leak-sensor'
+name: 'Zigbee Water Leak Sensor (AonghusMor)'
+packageKey: 'zigbee-water-leak-sensor2'
 permissions:
   zigbee: {}

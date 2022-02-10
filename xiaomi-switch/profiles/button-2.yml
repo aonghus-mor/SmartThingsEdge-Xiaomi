@@ -5,7 +5,11 @@ components:
     capabilities:
     - id: button
       version: 1
+    - id: temperatureMeasurement
+      version: 1
     - id: temperatureAlarm
+      version: 1
+    - id: signalStrength
       version: 1
     - id: refresh
       version: 1
@@ -20,7 +24,7 @@ components:
       version: 1
     categories:
     - name: RemoteController
-  - id: button3
+  - id: group1
     label: "Both buttons"
     capabilities:
     - id: button

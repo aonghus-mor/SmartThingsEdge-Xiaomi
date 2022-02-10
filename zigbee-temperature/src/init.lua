@@ -8,7 +8,23 @@ local xiaomi_utils = require "xiaomi_utils"
 local zcl_clusters = require "st.zigbee.zcl.clusters"
 local atmos_Pressure = capabilities ["legendabsolute60149.atmosPressure"]
 
-local tempearture_value_attr_handler = function(driver, device, value, zb_rx)
+local device_init = function(self, device)
+  log.debug("Running device_init")
+  local cluster_ID = zcl_clusters.TemperatureMeasurement.ID
+  local attr_ID = zcl_clusters.TemperatureMeasurement.attributes.MeasuredValue.ID
+  device:remove_monitored_attribute(cluster_ID, attr_ID)
+  log.debug(string.format("0x%04X:0x%04X monitoring removed", cluster_ID,attr_ID))
+end
+
+local do_configure = function(self, device)
+  log.debug("Running do_configure")
+end
+
+local info_changed = function(self, device)
+  log.debug("Running info_changed")
+end
+
+local temperature_value_attr_handler = function(driver, device, value, zb_rx)
   local temperature = value.value / 100
 
   if temperature < -99 or temperature > 99 then
@@ -42,9 +58,9 @@ local pressure_value_attr_handler = function(driver, device, value, zb_rx)
 end
 
 local function refresh_handler(driver, device, command)
-  device:send(zcl_clusters.TemperatureMeasurement.attributes.MeasuredValue:read(device))
-  device:send(zcl_clusters.RelativeHumidity.attributes.MeasuredValue:read(device))
-  device:send(zcl_clusters.PressureMeasurement.attributes.MeasuredValue:read(device))
+  --device:send(zcl_clusters.TemperatureMeasurement.attributes.MeasuredValue:read(device))
+  --device:send(zcl_clusters.RelativeHumidity.attributes.MeasuredValue:read(device))
+  --device:send(zcl_clusters.PressureMeasurement.attributes.MeasuredValue:read(device))
 end
 
 local zigbee_temp_driver_template = {
@@ -54,20 +70,21 @@ local zigbee_temp_driver_template = {
     capabilities.temperatureMeasurement,
     capabilities.battery,
     capabilities.temperatureAlarm,
+	capabilities.signalStrength,
   },
   use_defaults = true,
-  capability_handlers = {
-    [capabilities.refresh.ID] = {
-      [capabilities.refresh.commands.refresh.NAME] = refresh_handler
-    }
-  },
+  --capability_handlers = {
+  --  [capabilities.refresh.ID] = {
+  --    [capabilities.refresh.commands.refresh.NAME] = refresh_handler
+  --  }
+  --},
   zigbee_handlers = {
     attr = {
       [zcl_clusters.basic_id] = {
         [xiaomi_utils.attr_id] = xiaomi_utils.handler
       },
       [zcl_clusters.TemperatureMeasurement.ID] = {
-        [zcl_clusters.TemperatureMeasurement.attributes.MeasuredValue.ID] = tempearture_value_attr_handler
+        [zcl_clusters.TemperatureMeasurement.attributes.MeasuredValue.ID] = temperature_value_attr_handler
       },
       [zcl_clusters.RelativeHumidity.ID] = {
         [zcl_clusters.RelativeHumidity.attributes.MeasuredValue.ID] = humidity_value_attr_handler
@@ -77,6 +94,12 @@ local zigbee_temp_driver_template = {
       }
     }
   },
+  lifecycle_handlers = {
+    init = device_init,
+    added = device_init,
+    --doConfigure = do_configure,
+    --infoChanged = info_changed,
+  }
 }
 
 defaults.register_for_default_handlers(zigbee_temp_driver_template, zigbee_temp_driver_template.supported_capabilities)

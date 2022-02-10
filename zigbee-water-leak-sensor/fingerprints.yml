@@ -5,7 +5,4 @@ zigbeeManufacturer:
     model: lumi.sensor_wleak.aq1
     deviceProfileName: water-temp-tempalarm-battery
 
-zigbeeGeneric:
-  - id: "any"
-    deviceLabel: any
-    deviceProfileName: water-temp-tempalarm-battery
+

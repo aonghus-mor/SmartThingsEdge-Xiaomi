@@ -1,11 +1,8 @@
-name: opple-button-2
+name: opple-button-6
 components:
   - id: main
-    label: "Left"
     capabilities:
     - id: button
-      version: 1
-    - id: temperatureAlarm
       version: 1
     - id: refresh
       version: 1
@@ -14,19 +11,36 @@ components:
     categories:
     - name: RemoteController
   - id: button2
-    label: "Right"
     capabilities:
     - id: button
       version: 1
     categories:
     - name: RemoteController
-  - id: group1
-    label: "Both buttons"
+  - id: button3
     capabilities:
     - id: button
       version: 1
     categories:
     - name: RemoteController
+  - id: button4
+    capabilities:
+    - id: button
+      version: 1
+    categories:
+    - name: RemoteController
+  - id: button5
+    capabilities:
+    - id: button
+      version: 1
+    categories:
+    - name: RemoteController
+  - id: button6
+    capabilities:
+    - id: button
+      version: 1
+    categories:
+    - name: RemoteController
+
 preferences:
 - title: "Mode"
   description: "press a button to wake up the device"

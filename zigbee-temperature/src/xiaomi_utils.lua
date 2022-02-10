@@ -9,8 +9,8 @@ local xiaomi_key_map = {
   [0x01] = "battery_mV",
   [0x03] = "deviceTemperature",
   [0x04] = "unknown1",
-  [0x05] = "RSSI_dB",
-  [0x06] = "LQI",
+  [0x05] = "RSSI_dB", -- not an expected value
+  [0x06] = "LQI",	  -- not an expected value
   [0x07] = "unknown2",
   [0x08] = "unknown3",
   [0x09] = "unknown4",
@@ -63,6 +63,33 @@ local function emit_temperature_event(device, temperature_record)
   end
   
   device:emit_event(capabilities.temperatureAlarm.temperatureAlarm(alarm))
+  device:emit_event(capabilities.temperatureMeasurement.temperature({ value = temperature, unit = "C" }))
+end
+
+local function emit_rssi_event(device, rssi_db)
+	if device:supports_capability(capabilities.signalStrength, "main") then
+		local rssi_value = rssi_db.value - 100
+		log.debug("emitting rssi:", rssi_value)
+		if rssi_value < 0 then
+			device:emit_event(capabilities.signalStrength.rssi(rssi_value))
+		end
+	end
+end
+
+local function emit_lqi_event(device, lqi)
+	if device:supports_capability(capabilities.signalStrength, "main") then
+		local lqi_value = 0x0100 - lqi.value  
+		log.debug("emitting LQI:", lqi_value)
+		device:emit_event(capabilities.signalStrength.lqi(lqi_value))
+	end
+end
+
+local function emit_signal_event(device, rssi_value, lqi_value)
+	if device:supports_capability(capabilities.signalStrength, "main") then 
+		log.debug(string.format("Emitting RSSI:%4d   LQI:%4d", rssi_value, lqi_value))
+		device:emit_event(capabilities.signalStrength.rssi(rssi_value))
+		device:emit_event(capabilities.signalStrength.lqi(lqi_value))
+	end
 end
 
 local xiaomi_utils = {
@@ -70,6 +97,8 @@ local xiaomi_utils = {
   xiami_events = {
     [0x01] = emit_battery_event,
     [0x03] = emit_temperature_event,
+	--[0x05] = emit_rssi_event,
+	--[0x06] = emit_lqi_event,
   }
 }
 
@@ -88,6 +117,8 @@ function xiaomi_utils.handler(driver, device, value, zb_rx)
         event(device, value)
       end
     end
+	-- get signal strength from zb_rx
+	emit_signal_event(device, zb_rx.rssi.value, zb_rx.lqi.value)
   end
 end
 

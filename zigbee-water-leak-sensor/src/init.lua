@@ -7,6 +7,11 @@ local log = require "log"
 local xiaomi_utils = require "xiaomi_utils"
 local zigbee_utils = require "zigbee_utils"
 
+local device_init = function(self, device)
+  log.debug("Running device_init")
+  device:emit_event(capabilities.waterSensor.water('dry'))
+end
+
 local do_refresh = function(self, device)
   zigbee_utils.print_clusters(device)
 
@@ -19,6 +24,7 @@ local xiaomi_water_driver_template = {
     capabilities.waterSensor,
     capabilities.temperatureAlarm,
     capabilities.temperatureMeasurement,
+	capabilities.signalStrength,
     capabilities.battery,
   },
   use_defaults = false,
@@ -35,6 +41,12 @@ local xiaomi_water_driver_template = {
         [xiaomi_utils.attr_id] = xiaomi_utils.handler
       },
     },
+  },
+  lifecycle_handlers = {
+    --init = device_init,
+    --added = device_init,
+    --doConfigure = do_configure,
+    --infoChanged = info_changed,
   },
   ias_zone_configuration_method = constants.IAS_ZONE_CONFIGURE_TYPE.AUTO_ENROLL_RESPONSE,
   sub_drivers = {  },

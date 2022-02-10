@@ -60,8 +60,8 @@ local function emit_battery_event(device, battery_record)
 end
 
 local function emit_signal_event(device, rssi_db, lqi)
-  log.info("xiaomi_utils.lua: emit_signal_event", rssi_db, lqi)
   if device:supports_capability(capabilities.signalStrength, "main") then
+    log.debug(string.format("Emitting RSSI:%4d (0x%04X)  LQI:%4d (0x%02X)", rssi_db, rssi_db & 0xFFFF, lqi, lqi))
     device:emit_event(capabilities.signalStrength.rssi(rssi_db))
     device:emit_event(capabilities.signalStrength.lqi(lqi))
   end
@@ -80,6 +80,11 @@ local function emit_temperature_event(device, temperature_record)
     alarm = capabilities.temperatureAlarm.temperatureAlarm.freeze()
   end
   device:emit_event(alarm)
+  device:emit_event(capabilities.temperatureMeasurement.temperature({ value = temperature, unit = "C" }))
+end
+
+local function test_log(device, mystring)
+   log.debug("Debugging:", mystring, mystring.value)
 end
 
 local xiaomi_utils = {
@@ -88,6 +93,8 @@ local xiaomi_utils = {
   xiami_events = {
     [0x01] = emit_battery_event,
     [0x03] = emit_temperature_event,
+	[0x05] = test_log,
+	[0x06] = test_log,
   }
 }
 
@@ -105,14 +112,8 @@ function xiaomi_utils.handler(driver, device, value, zb_rx)
       end
     end
 
-    local rssi_db = xiaomi_data_type.items[0x05]
-    local lqi = xiaomi_data_type.items[0x06]
-    if rssi_db ~= nil and lqi ~= nil then
-      emit_signal_event(device, rssi_db.value, lqi.value)
-      -- emit_signal_event(device, xiaomi_data_type.items[0x05].value, xiaomi_data_type.items[0x06].value)
-    end
-    
-    -- log.warn("xiaomi_utils.handler handled: " .. tostring(#xiaomi_data_type.items))
+    emit_signal_event(device, zb_rx.rssi.value, zb_rx.lqi.value)
+
   else
     log.warn("xiaomi_utils.handler: unknown data type: " .. tostring (value) )
   end

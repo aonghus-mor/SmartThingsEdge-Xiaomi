@@ -1,4 +1,4 @@
 name: 'Xiaomi/Aqara Switch (AonghusMor)'
-packageKey: 'lumi-switch2'
+packageKey: 'lumi-switch'
 permissions:
   zigbee: {}

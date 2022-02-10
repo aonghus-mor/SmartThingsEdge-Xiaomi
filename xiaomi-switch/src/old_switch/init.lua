@@ -64,7 +64,7 @@ end
 function on_off_attr_handler(driver, device, value, zb_rx)
     local ep = zb_rx.address_header.src_endpoint.value
     local first_button_ep = utils.first_button_ep(device)
-
+	log.debug("on_off_attr_handler running")
     if ep < first_button_ep  then -- handled by default handler
         local attr = capabilities.switch.switch
         device:emit_event_for_endpoint(ep, value.value and attr.on() or attr.off())
@@ -80,7 +80,7 @@ function on_off_attr_handler(driver, device, value, zb_rx)
         end
         --old_button_handler(device, component_id, value)
         --
-        device:remove_monitored_attribute(OnOff, 000) -- AmacK
+        
         --        
     end
 end
